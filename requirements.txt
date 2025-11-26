@@ -1,1 +1,5 @@
+# Required dependencies
+requests>=2.31.0
 
+# Optional but recommended: python-dotenv for .env file support
+python-dotenv>=1.0.0
