@@ -1,11 +1,9 @@
 name: TAO Earnings Discord Reporter
 
 on:
-  # Schedule: Run every 5 minutes (GitHub Actions minimum)
-  # Note: GitHub Actions has a 5-minute minimum for scheduled workflows
-  # For true 2-minute intervals, consider using a server cron job or cloud scheduler
+  # Schedule: Run every 10 minutes
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes (minimum allowed by GitHub)
+    - cron: '*/10 * * * *'  # Every 10 minutes
   
   # Manual trigger
   workflow_dispatch:

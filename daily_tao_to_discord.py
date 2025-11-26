@@ -32,10 +32,10 @@ import requests
 if load_dotenv is not None:
     load_dotenv()
 
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-TAOSTATS_API_KEY = os.environ.get("TAOSTATS_API_KEY")
-TAOSTATS_BASE_URL = os.environ.get("TAOSTATS_BASE_URL", "https://api.taostats.io/api")
-MINER_ADDRESSES = os.environ.get("MINER_ADDRESSES")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
+TAOSTATS_API_KEY = os.environ.get("TAOSTATS_API_KEY", "").strip()
+TAOSTATS_BASE_URL = os.environ.get("TAOSTATS_BASE_URL", "https://api.taostats.io/api").strip()
+MINER_ADDRESSES = os.environ.get("MINER_ADDRESSES", "").strip()
 LOOKBACK_DAYS = int(os.environ.get("TAO_LOOKBACK_DAYS", "10"))
 TAO_NETWORK = os.environ.get("TAO_NETWORK", "finney")
 DEBUG_MODE = os.environ.get("DEBUG", "").lower() in ("1", "true", "yes")
