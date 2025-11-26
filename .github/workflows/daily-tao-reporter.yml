@@ -3,7 +3,7 @@ name: TAO Earnings Discord Reporter
 on:
   # Schedule: Run every 10 minutes
   schedule:
-    - cron: '*/10 * * * *'  # Every 10 minutes
+    - cron: '0 * * * *'  # Every hour at :00
   
   # Manual trigger
   workflow_dispatch:
