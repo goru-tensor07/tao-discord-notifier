@@ -35,6 +35,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            echo "❌ Error: DISCORD_WEBHOOK_URL secret is not set"
+            echo "Please go to: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "${{ secrets.TAOSTATS_API_KEY }}" ]; then
+            echo "❌ Error: TAOSTATS_API_KEY secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.MINER_ADDRESSES }}" ]; then
+            echo "❌ Error: MINER_ADDRESSES secret is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+      
       - name: Run TAO Reporter
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

@@ -48,6 +48,56 @@ DEBUG=false                   # Enable debug mode
 python daily_tao_to_discord.py
 ```
 
+### Run with GitHub Actions (Automated):
+
+The repository includes a GitHub Actions workflow that runs automatically.
+
+#### Option 1: GitHub Actions (5-minute minimum)
+
+**Limitation:** GitHub Actions has a **5-minute minimum** for scheduled workflows.
+
+**Setup:**
+
+1. **Add GitHub Secrets:**
+   - Go to your repository → **Settings** → **Secrets and variables** → **Actions**
+   - Add the following secrets:
+     - `DISCORD_WEBHOOK_URL` - Your Discord webhook URL
+     - `TAOSTATS_API_KEY` - Your Taostats API key
+     - `MINER_ADDRESSES` - Comma-separated coldkey addresses
+     - `TAO_LOOKBACK_DAYS` (optional) - Default: 10
+     - `TAO_NETWORK` (optional) - Default: finney
+     - `DEBUG` (optional) - Default: false
+
+2. **Workflow will automatically:**
+   - Run every 5 minutes (GitHub minimum)
+   - Fetch earnings data
+   - Post to Discord webhook
+
+3. **Manual trigger:**
+   - Go to **Actions** tab → **TAO Earnings Discord Reporter** → **Run workflow**
+
+#### Option 2: Server Cron Job (True 2-minute intervals)
+
+For true 2-minute intervals, use a cron job on your server:
+
+1. **Set up environment variables** in your `.env` file (see Configuration section)
+
+2. **Add to crontab:**
+   ```bash
+   crontab -e
+   # Add this line:
+   */2 * * * * /path/to/daily-tao-script/cron-2min.sh
+   ```
+
+3. **Or use the provided script:**
+   ```bash
+   chmod +x cron-2min.sh
+   # Then add to crontab:
+   */2 * * * * /full/path/to/cron-2min.sh >> /var/log/tao-reporter.log 2>&1
+   ```
+
+**Note:** See `.github/SECRETS_SETUP.md` for detailed GitHub Secrets setup instructions.
+
 
 ## Environment Variables
 

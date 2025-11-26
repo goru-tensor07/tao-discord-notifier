@@ -1,58 +1,100 @@
 # GitHub Secrets Setup Guide
 
-To use this GitHub Actions workflow, you need to configure the following secrets in your repository:
+**⚠️ IMPORTANT:** GitHub Actions uses **Secrets**, not `.env` files. You must add secrets in GitHub's web interface.
 
-## Steps to Add Secrets:
+## Quick Setup (3 Steps):
 
-1. Go to your GitHub repository
-2. Click on **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret** for each of the following:
+### Step 1: Go to Secrets Page
+1. Open your GitHub repository
+2. Click **Settings** (top menu)
+3. Click **Secrets and variables** → **Actions** (left sidebar)
+4. Click **New repository secret** button
 
-## Required Secrets:
+### Step 2: Add Required Secrets
 
-### `DISCORD_WEBHOOK_URL`
-- **Description**: Your Discord webhook URL
-- **Format**: `https://discord.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz`
-- **How to get**: 
-  - Go to your Discord server
-  - Server Settings → Integrations → Webhooks → New Webhook
-  - Copy the webhook URL
+Add these **3 required secrets** (one at a time):
 
-### `TAOSTATS_API_KEY`
-- **Description**: Your Taostats API key
-- **Format**: Your API key string
-- **How to get**: Get from Taostats API documentation or dashboard
+#### 1. `DISCORD_WEBHOOK_URL`
+- **Name:** `DISCORD_WEBHOOK_URL`
+- **Value:** Your Discord webhook URL
+- **Example:** `https://discord.com/api/webhooks/123456789/abcdefghijklmnopqrstuvwxyz`
+- **How to get:**
+  - Discord Server → Server Settings → Integrations → Webhooks
+  - Click "New Webhook" or copy existing webhook URL
+  - Copy the full URL
 
-### `MINER_ADDRESSES`
-- **Description**: Comma-separated list of coldkey addresses
-- **Format**: `5ABC...,5DEF...,5GHI...`
-- **Example**: `5G3xHmDRz9yWDS9tnznWTVnyhCvLZiLUUbqFbRNEreGSCYgD`
+#### 2. `TAOSTATS_API_KEY`
+- **Name:** `TAOSTATS_API_KEY`
+- **Value:** Your Taostats API key
+- **Example:** `your-api-key-here`
+- **How to get:** From Taostats API documentation or dashboard
 
-## Optional Secrets:
+#### 3. `MINER_ADDRESSES`
+- **Name:** `MINER_ADDRESSES`
+- **Value:** Your coldkey address(es)
+- **Example (single):** `5G3xHmDRz9yWDS9tnznWTVnyhCvLZiLUUbqFbRNEreGSCYgD`
+- **Example (multiple):** `5ABC...,5DEF...,5GHI...` (comma-separated)
 
-### `TAO_LOOKBACK_DAYS`
-- **Description**: Number of days to look back (default: 10)
-- **Format**: Integer (e.g., `10`, `30`, `0` for all-time)
+### Step 3: Add Optional Secrets (if needed)
 
-### `TAO_NETWORK`
-- **Description**: Bittensor network name (default: finney)
-- **Format**: `finney`, `nakamoto`, or `kusanagi`
+These have defaults, but you can customize:
 
-### `DEBUG`
-- **Description**: Enable debug mode (default: false)
-- **Format**: `true` or `false`
+#### `TAO_LOOKBACK_DAYS`
+- **Name:** `TAO_LOOKBACK_DAYS`
+- **Value:** `10` (or any number, `0` for all-time)
+- **Default:** `10` if not set
+
+#### `TAO_NETWORK`
+- **Name:** `TAO_NETWORK`
+- **Value:** `finney`, `nakamoto`, or `kusanagi`
+- **Default:** `finney` if not set
+
+#### `DEBUG`
+- **Name:** `DEBUG`
+- **Value:** `true` or `false`
+- **Default:** `false` if not set
+
+## Visual Guide:
+
+```
+Repository → Settings → Secrets and variables → Actions
+    ↓
+New repository secret
+    ↓
+Name: DISCORD_WEBHOOK_URL
+Secret: https://discord.com/api/webhooks/...
+    ↓
+Add secret
+    ↓
+Repeat for TAOSTATS_API_KEY and MINER_ADDRESSES
+```
 
 ## Verification:
 
-After adding secrets, the workflow will:
-- Run every 2 minutes automatically
-- Use your configured secrets
-- Post earnings reports to your Discord channel
+After adding all secrets:
 
-## Testing:
-
-You can manually trigger the workflow:
 1. Go to **Actions** tab
-2. Select **TAO Earnings Discord Reporter**
-3. Click **Run workflow** → **Run workflow**
+2. Click **TAO Earnings Discord Reporter** workflow
+3. Click **Run workflow** → **Run workflow** (to test)
+4. Check the run logs - should see "✅ All required secrets are configured"
 
+## Troubleshooting:
+
+### Error: "DISCORD_WEBHOOK_URL environment variable is required"
+- **Solution:** Make sure you added the secret with the exact name `DISCORD_WEBHOOK_URL`
+- Check: Settings → Secrets and variables → Actions → You should see all 3 required secrets listed
+
+### Error: "ModuleNotFoundError: No module named 'requests'"
+- **Solution:** Already fixed in `requirements.txt` - make sure you've pushed the latest code
+
+### Workflow not running automatically
+- **Solution:** Scheduled workflows only run on the default branch (usually `main`)
+- Make sure your workflow file is in `.github/workflows/` directory
+- Push to `main` branch to activate the schedule
+
+## Security Notes:
+
+- ✅ Secrets are encrypted and only visible to repository admins
+- ✅ Secrets are never exposed in logs (GitHub automatically masks them)
+- ✅ Never commit `.env` files or API keys to the repository
+- ✅ Use GitHub Secrets for all sensitive data
