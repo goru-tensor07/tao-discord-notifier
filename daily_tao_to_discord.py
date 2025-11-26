@@ -155,7 +155,7 @@ class DailyTaoReporter:
             lines.append(f"• `{entry.coldkey}`: **{(int(entry.amount_tao)/(10**9)):.2f} TAO**")
 
         lines.append("")
-        lines.append(f"**Total:** {total:.6f} TAO across {len(earnings)} coldkey(s)")
+        lines.append(f"**Total:** {total/(10**9):.6f} TAO across {len(earnings)} coldkey(s)")
 
         return "\n".join(lines)
 
