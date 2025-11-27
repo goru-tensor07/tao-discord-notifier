@@ -237,31 +237,38 @@ class DailyTaoReporter:
 
         # Build header based on time range
         if LOOKBACK_DAYS <= 0:
-            header = "📊 Total TAO Earnings (All Time)"
+            header = "🧠 Bittensor Network Report — All Time"
         elif LOOKBACK_DAYS == 1:
-            header = f"📊 Daily TAO Earnings — {end_date.isoformat() if end_date else 'N/A'}"
+            header = f"🧠 Bittensor Network Report — {end_date.isoformat() if end_date else 'N/A'}"
         else:
-            header = f"📊 TAO Earnings — {date_start_str} → {date_end_str}"
+            header = f"🧠 Bittensor Network Report — {date_start_str} to {date_end_str}"
 
-        lines = [header, f"Network: **{TAO_NETWORK}**", ""]
+        lines = [
+            header,
+            f"🔗 Network: {TAO_NETWORK.capitalize()}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            ""
+        ]
 
         # Add earnings section
         if earnings:
-            lines.append("**💰 TAO Earnings:**")
+            lines.append("💎 TAO Earnings")
             total_earnings = 0.0
             for entry in earnings:
                 total_earnings += entry.amount_tao
-                lines.append(f"• `{entry.coldkey[:20]}...`: **{entry.amount_tao:.6f} TAO**")
+                coldkey_short = f"{entry.coldkey[:12]}...{entry.coldkey[-8:]}" if len(entry.coldkey) > 20 else entry.coldkey
+                lines.append(f"   └─ `{coldkey_short}`: **{entry.amount_tao:.6f} TAO**")
             
-            lines.append(f"**Total Earnings:** {total_earnings:.6f} TAO across {len(earnings)} coldkey(s)")
+            lines.append(f"\n   **Total:** {total_earnings:.6f} TAO ({len(earnings)} coldkey{'s' if len(earnings) != 1 else ''})")
             lines.append("")
         else:
-            lines.append("**💰 TAO Earnings:** No earnings data available.")
+            lines.append("💎 TAO Earnings")
+            lines.append("   └─ No earnings data available for this period")
             lines.append("")
 
         # Add alpha staked balances section
         if alpha_balances:
-            lines.append("**🔷 Alpha Staked Balances:**")
+            lines.append("⚡ Alpha Staked Balances")
             total_alpha_tao = 0.0
             
             for balance in alpha_balances:
@@ -270,15 +277,16 @@ class DailyTaoReporter:
                 
                 # Get alpha token symbol for this subnet, default to "α" if not found
                 token_symbol = ALPHA_TOKEN_SYMBOLS.get(balance.netuid, "α")
-                hotkey_info = f" ({balance.hotkey_name})" if balance.hotkey_name else ""
+                hotkey_info = f" • {balance.hotkey_name}" if balance.hotkey_name else ""
                 lines.append(
-                    f"• Subnet **{balance.netuid}**{hotkey_info}: "
+                    f"   └─ Subnet **#{balance.netuid}**{hotkey_info}: "
                     f"**{balance_tao:.4f} {token_symbol}**"
                 )
             
-            
+            lines.append(f"\n   **Total:** {total_alpha_tao:.4f} α-TAO ({len(alpha_balances)} subnet{'s' if len(alpha_balances) != 1 else ''})")
         else:
-            lines.append("**🔷 Alpha Staked Balances:** No alpha stake data available.")
+            lines.append("⚡ Alpha Staked Balances")
+            lines.append("   └─ No alpha stake data available")
 
         return "\n".join(lines)
 

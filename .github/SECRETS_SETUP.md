@@ -84,6 +84,13 @@ After adding all secrets:
 - **Solution:** Make sure you added the secret with the exact name `DISCORD_WEBHOOK_URL`
 - Check: Settings → Secrets and variables → Actions → You should see all 3 required secrets listed
 
+### Error: "Invalid header value" or trailing newline in API key
+- **Solution:** When copying your API key, make sure there are no extra spaces or newlines
+- **Fix:** The code now automatically strips whitespace, but double-check your secret value:
+  1. Go to Settings → Secrets → Edit the secret
+  2. Make sure there's no trailing space or newline
+  3. Copy the key again without selecting any trailing whitespace
+
 ### Error: "ModuleNotFoundError: No module named 'requests'"
 - **Solution:** Already fixed in `requirements.txt` - make sure you've pushed the latest code
 
