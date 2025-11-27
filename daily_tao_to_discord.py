@@ -269,11 +269,11 @@ class DailyTaoReporter:
         # Add alpha staked balances section
         if alpha_balances:
             lines.append("⚡ Alpha Staked Balances")
-            total_alpha_tao = 0.0
+            
             
             for balance in alpha_balances:
                 balance_tao = float(balance.balance_rao) / RAO_TO_TAO
-                total_alpha_tao += balance_tao
+                
                 
                 # Get alpha token symbol for this subnet, default to "α" if not found
                 token_symbol = ALPHA_TOKEN_SYMBOLS.get(balance.netuid, "α")
@@ -283,10 +283,7 @@ class DailyTaoReporter:
                     f"**{balance_tao:.4f} {token_symbol}**"
                 )
             
-            lines.append(f"\n   **Total:** {total_alpha_tao:.4f} α-TAO ({len(alpha_balances)} subnet{'s' if len(alpha_balances) != 1 else ''})")
-        else:
-            lines.append("⚡ Alpha Staked Balances")
-            lines.append("   └─ No alpha stake data available")
+            
 
         return "\n".join(lines)
 
