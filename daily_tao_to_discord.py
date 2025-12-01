@@ -219,16 +219,31 @@ class DailyTaoReporter:
                 print(f"🔍 Debug: Error fetching alpha rewards: {exc}", file=sys.stderr)
             return []
 
+    def fetch_earned_tao(self, coldkey: str, days: int) -> dict:
+        """Fetch earned TAO for a coldkey."""
+        url = f"https://api.taostats.io/api/dtao/stake_balance/portfolio/v1?coldkey={coldkey}&days={days}"
+        
+        try:
+            res_json = self._make_api_request(url)
+            
+            return res_json
+        except Exception as exc:
+            if DEBUG_MODE:
+                print(f"🔍 Debug: Error fetching earned TAO: {exc}", file=sys.stderr)
+            return {}
+
     def build_message(
         self, 
         earnings: List[MinerEarning], 
-        alpha_balances: Optional[List[AlphaStakeBalance]] = None
+        alpha_balances: Optional[List[AlphaStakeBalance]] = None,
+        earned_tao: Optional[dict] = None
     ) -> str:
         """Build formatted Discord message from earnings and alpha balances.
         
         Args:
             earnings: List of TAO earnings
             alpha_balances: Optional list of alpha staked balances
+            earned_tao: Optional dict containing earned TAO data from portfolio API
             
         Returns:
             Formatted message string for Discord
@@ -283,7 +298,47 @@ class DailyTaoReporter:
                     f"**{balance_tao:.4f} {token_symbol}**"
                 )
             
-            
+            lines.append("")
+
+        # Add total earned alpha as TAO for subnets 0, 41 and 64
+        if earned_tao and isinstance(earned_tao, dict):
+            data = earned_tao.get("data", [])
+            if data:
+                total_earned_alpha_tao = 0.0
+                subnet_0_value = None
+                subnet_41_value = None
+                subnet_64_value = None
+                
+                for item in data:
+                    netuid = item.get("netuid")
+                    if netuid in (0, 41, 64):
+                        total_earned_alpha_as_tao_str = item.get("total_earned_alpha_as_tao", "0")
+                        try:
+                            # Convert from RAO to TAO (assuming values are in RAO)
+                            value_rao = float(total_earned_alpha_as_tao_str)
+                            value_tao = value_rao / RAO_TO_TAO
+                            total_earned_alpha_tao += value_tao
+                            
+                            if netuid == 0:
+                                subnet_0_value = value_tao
+                            elif netuid == 41:
+                                subnet_41_value = value_tao
+                            elif netuid == 64:
+                                subnet_64_value = value_tao
+                        except (ValueError, TypeError):
+                            if DEBUG_MODE:
+                                print(f"🔍 Debug: Could not parse total_earned_alpha_as_tao for subnet {netuid}: {total_earned_alpha_as_tao_str}", file=sys.stderr)
+                
+                if total_earned_alpha_tao > 0:
+                    lines.append("🎯 Total Earned Alpha (Subnets 0, 41 & 64)")
+                    if subnet_0_value is not None:
+                        lines.append(f"   └─ Subnet **#0**: **{subnet_0_value:.6f} TAO**")
+                    if subnet_41_value is not None:
+                        lines.append(f"   └─ Subnet **#41**: **{subnet_41_value:.6f} TAO**")
+                    if subnet_64_value is not None:
+                        lines.append(f"   └─ Subnet **#64**: **{subnet_64_value:.6f} TAO**")
+                    lines.append(f"\n   **Total (0 + 41 + 64):** **{total_earned_alpha_tao:.6f} TAO**")
+                    lines.append("")
 
         return "\n".join(lines)
 
@@ -361,7 +416,10 @@ class DailyTaoReporter:
         try:
             earnings = self.fetch_earnings()
             alpha_balances = self.fetch_alpha_rewards()
-            message = self.build_message(earnings, alpha_balances)
+            earned_tao = self.fetch_earned_tao(MINER_ADDRESSES, 30)
+            if DEBUG_MODE:
+                print("earned_tao", earned_tao)
+            message = self.build_message(earnings, alpha_balances, earned_tao)
         except Exception as exc:  # noqa: BLE001
             message = (
                 "⚠️ Daily TAO Earnings — data unavailable\n"
