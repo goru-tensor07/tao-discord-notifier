@@ -232,18 +232,77 @@ class DailyTaoReporter:
                 print(f"🔍 Debug: Error fetching earned TAO: {exc}", file=sys.stderr)
             return {}
 
+    def fetch_tao_price_usd(self) -> Optional[float]:
+        """Fetch TAO price in USD from the API.
+        
+        Returns:
+            TAO price in USD (float) or None if fetch fails
+        """
+        url = f"https://api.taostats.io/api/price/latest/v1?asset=tao"
+        
+        try:
+            res_json = self._make_api_request(url)
+            data = res_json.get("data", [])
+            if data and len(data) > 0:
+                price_str = data[0].get("price")
+                if price_str is not None:
+                    return float(price_str)
+            return None
+        except Exception as exc:
+            if DEBUG_MODE:
+                print(f"🔍 Debug: Error fetching TAO price: {exc}", file=sys.stderr)
+            return None
+
+    def _calculate_total_earned_alpha(self, earned_tao: dict) -> float:
+        """Calculate total earned alpha as TAO from all subnets.
+        
+        Args:
+            earned_tao: Dict containing earned TAO data from portfolio API
+            
+        Returns:
+            Total earned alpha as TAO (float)
+        """
+        if not earned_tao or not isinstance(earned_tao, dict):
+            return 0.0
+        
+        data = earned_tao.get("data", [])
+        if not data:
+            return 0.0
+        
+        total_earned_alpha_tao = 0.0
+        
+        for item in data:
+            total_earned_alpha_as_tao_str = item.get("total_earned_alpha_as_tao", "0")
+            try:
+                # Convert from RAO to TAO (assuming values are in RAO)
+                value_rao = float(total_earned_alpha_as_tao_str)
+                value_tao = value_rao / RAO_TO_TAO
+                total_earned_alpha_tao += value_tao
+            except (ValueError, TypeError):
+                netuid = item.get("netuid", "unknown")
+                if DEBUG_MODE:
+                    print(f"🔍 Debug: Could not parse total_earned_alpha_as_tao for subnet {netuid}: {total_earned_alpha_as_tao_str}", file=sys.stderr)
+        
+        return total_earned_alpha_tao
+
     def build_message(
         self, 
         earnings: List[MinerEarning], 
         alpha_balances: Optional[List[AlphaStakeBalance]] = None,
-        earned_tao: Optional[dict] = None
+        earned_tao_1d: Optional[dict] = None,
+        earned_tao_7d: Optional[dict] = None,
+        earned_tao_30d: Optional[dict] = None,
+        tao_price_usd: Optional[float] = None
     ) -> str:
         """Build formatted Discord message from earnings and alpha balances.
         
         Args:
             earnings: List of TAO earnings
             alpha_balances: Optional list of alpha staked balances
-            earned_tao: Optional dict containing earned TAO data from portfolio API
+            earned_tao_1d: Optional dict containing earned TAO data for 1 day
+            earned_tao_7d: Optional dict containing earned TAO data for 7 days
+            earned_tao_30d: Optional dict containing earned TAO data for 30 days
+            tao_price_usd: Optional TAO price in USD for conversion
             
         Returns:
             Formatted message string for Discord
@@ -272,9 +331,17 @@ class DailyTaoReporter:
             for entry in earnings:
                 total_earnings += entry.amount_tao
                 coldkey_short = f"{entry.coldkey[:12]}...{entry.coldkey[-8:]}" if len(entry.coldkey) > 20 else entry.coldkey
-                lines.append(f"   └─ `{coldkey_short}`: **{entry.amount_tao:.6f} TAO**")
+                if tao_price_usd is not None and tao_price_usd > 0:
+                    usd_value = entry.amount_tao * tao_price_usd
+                    lines.append(f"   └─ `{coldkey_short}`: **{entry.amount_tao:.6f} TAO** / ${usd_value:.2f} USD")
+                else:
+                    lines.append(f"   └─ `{coldkey_short}`: **{entry.amount_tao:.6f} TAO**")
             
-            lines.append(f"\n   **Total:** {total_earnings:.6f} TAO ({len(earnings)} coldkey{'s' if len(earnings) != 1 else ''})")
+            if tao_price_usd is not None and tao_price_usd > 0:
+                total_usd = total_earnings * tao_price_usd
+                lines.append(f"\n   **Total:** {total_earnings:.6f} TAO / ${total_usd:.2f} USD ({len(earnings)} coldkey{'s' if len(earnings) != 1 else ''})")
+            else:
+                lines.append(f"\n   **Total:** {total_earnings:.6f} TAO ({len(earnings)} coldkey{'s' if len(earnings) != 1 else ''})")
             lines.append("")
         else:
             lines.append("💎 TAO Earnings")
@@ -300,45 +367,32 @@ class DailyTaoReporter:
             
             lines.append("")
 
-        # Add total earned alpha as TAO for subnets 0, 41 and 64
-        if earned_tao and isinstance(earned_tao, dict):
-            data = earned_tao.get("data", [])
-            if data:
-                total_earned_alpha_tao = 0.0
-                subnet_0_value = None
-                subnet_41_value = None
-                subnet_64_value = None
-                
-                for item in data:
-                    netuid = item.get("netuid")
-                    if netuid in (0, 41, 64):
-                        total_earned_alpha_as_tao_str = item.get("total_earned_alpha_as_tao", "0")
-                        try:
-                            # Convert from RAO to TAO (assuming values are in RAO)
-                            value_rao = float(total_earned_alpha_as_tao_str)
-                            value_tao = value_rao / RAO_TO_TAO
-                            total_earned_alpha_tao += value_tao
-                            
-                            if netuid == 0:
-                                subnet_0_value = value_tao
-                            elif netuid == 41:
-                                subnet_41_value = value_tao
-                            elif netuid == 64:
-                                subnet_64_value = value_tao
-                        except (ValueError, TypeError):
-                            if DEBUG_MODE:
-                                print(f"🔍 Debug: Could not parse total_earned_alpha_as_tao for subnet {netuid}: {total_earned_alpha_as_tao_str}", file=sys.stderr)
-                
-                if total_earned_alpha_tao > 0:
-                    lines.append("🎯 Total Earned Alpha (Subnets 0, 41 & 64)")
-                    if subnet_0_value is not None:
-                        lines.append(f"   └─ Subnet **#0**: **{subnet_0_value:.6f} TAO**")
-                    if subnet_41_value is not None:
-                        lines.append(f"   └─ Subnet **#41**: **{subnet_41_value:.6f} TAO**")
-                    if subnet_64_value is not None:
-                        lines.append(f"   └─ Subnet **#64**: **{subnet_64_value:.6f} TAO**")
-                    lines.append(f"\n   **Total (0 + 41 + 64):** **{total_earned_alpha_tao:.6f} TAO**")
-                    lines.append("")
+        # Add total earned alpha as TAO from all subnets for different time periods
+        earned_periods = []
+        if earned_tao_1d:
+            total_1d = self._calculate_total_earned_alpha(earned_tao_1d)
+            if total_1d > 0:
+                earned_periods.append(("1 Day", total_1d))
+        
+        if earned_tao_7d:
+            total_7d = self._calculate_total_earned_alpha(earned_tao_7d)
+            if total_7d > 0:
+                earned_periods.append(("7 Days (Weekly)", total_7d))
+        
+        if earned_tao_30d:
+            total_30d = self._calculate_total_earned_alpha(earned_tao_30d)
+            if total_30d > 0:
+                earned_periods.append(("30 Days (Monthly)", total_30d))
+        
+        if earned_periods:
+            lines.append("🎯 Total Earned Alpha (All Subnets)")
+            for period_name, total in earned_periods:
+                if tao_price_usd is not None and tao_price_usd > 0:
+                    total_usd = total * tao_price_usd
+                    lines.append(f"   └─ **{period_name}:** **{total:.6f} TAO** / ${total_usd:.2f} USD")
+                else:
+                    lines.append(f"   └─ **{period_name}:** **{total:.6f} TAO**")
+            lines.append("")
 
         return "\n".join(lines)
 
@@ -416,10 +470,16 @@ class DailyTaoReporter:
         try:
             earnings = self.fetch_earnings()
             alpha_balances = self.fetch_alpha_rewards()
-            earned_tao = self.fetch_earned_tao(MINER_ADDRESSES, 30)
+            earned_tao_1d = self.fetch_earned_tao(MINER_ADDRESSES, 1)
+            earned_tao_7d = self.fetch_earned_tao(MINER_ADDRESSES, 7)
+            earned_tao_30d = self.fetch_earned_tao(MINER_ADDRESSES, 30)
+            tao_price_usd = self.fetch_tao_price_usd()
             if DEBUG_MODE:
-                print("earned_tao", earned_tao)
-            message = self.build_message(earnings, alpha_balances, earned_tao)
+                print("earned_tao_1d", earned_tao_1d)
+                print("earned_tao_7d", earned_tao_7d)
+                print("earned_tao_30d", earned_tao_30d)
+                print("tao_price_usd", tao_price_usd)
+            message = self.build_message(earnings, alpha_balances, earned_tao_1d, earned_tao_7d, earned_tao_30d, tao_price_usd)
         except Exception as exc:  # noqa: BLE001
             message = (
                 "⚠️ Daily TAO Earnings — data unavailable\n"
